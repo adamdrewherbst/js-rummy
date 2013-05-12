@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Rummy</title>
+		<link type="text/css" rel="stylesheet" href="rummy.css"></link>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+		<script type="text/javascript" src="../masonry/jquery.masonry.js"></script>
+		<script type="text/javascript" src="rummy.js"></script>
+	</head>
+	<body>
+		<div id="game_panel">
+			<div id="card_panel"> <!--boundary of where the cards can move-->
+				<!--set, stack, and hand are just to provide boundaries for each card pile -->
+				<div id="animation_panel"></div> <!--place an element here when it needs to be moved across the screen-->
+				<div id="stack" class="pile"><div class="inner"></div></div>
+				<div id="set" class="pile"><div class="inner"></div></div>
+				<div id="hand" class="pile"><div class="inner"></div></div>
+			</div>
+			<div id="control_panel">
+				<button id="start_button" type="button"></button>
+				<input type="text" id="debug_text" size="100">Debug code here</input>
+			</div>
+		</div>
+	</body>
+</html>
