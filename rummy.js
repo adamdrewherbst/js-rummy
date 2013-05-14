@@ -6,11 +6,12 @@ var numCards = suits.length * numbers.length, handSize = 7, dealt = false;
 function resetGame() {
 	//generate all 52 cards as a stack on the upper left
 	dealt = false;
-	$('div.pile > .inner').empty();
+	$('div.pile > .inner').empty(); //the inner div of a pile holds its cards
 	$stack = $('#stack');
-	console.info($('#stack > .inner').position(), $('#stack > .inner').offset());
+	//make an array of the numbers 0-51
 	var cards = []
 	for(var i = 0; i < numCards; i++) cards.push(i);
+	//and randomly iterate over it to generate the .card divs in the deck, until it is empty - this way the deck is shuffled
 	for(var i = 0; i < numCards; i++) {
 		var c = Math.floor(Math.random() * cards.length);
 		var s = Math.floor(cards[c] / numbers.length);
@@ -24,11 +25,13 @@ function resetGame() {
 		$card.attr('moving','false');
 		$card.attr('mousePressed','false');
 		$card.append('<div><div>' + text + '</div></div>'); //see rummy.css - 2 nested divs required to center text within card
-		//for each card, create an invisible 'target card' that will be used as the endpoint for animated movements between piles...
-		$card.data('targetCard', $card.clone().css('visibility','hidden'));
 		//now add the card to the deck
 		$('#stack > .inner').append($card);
-		//clicking cards is how to play the game!
+		
+		//for each card, create an invisible 'target card' that will be used as the endpoint for animated movements between piles
+		$card.data('targetCard', $card.clone().css('visibility','hidden'));
+
+		//cards can be dragged and dropped between the hand and set piles
 		$card.draggable({
 			disabled: true,
 			cancel: '[moving="true"]',
@@ -65,6 +68,9 @@ function resetGame() {
 				moveCard($other, getPile($this), 0, $before, ui.helper.position());
 			},
 		});
+		
+		//clicking a hand/set card also toggles which pile it is in
+		//and right-clicking a hand card discards it - we need .mousedown/.mouseup because .click doesn't handle right-clicks
 		$card.mousedown(function(event) {
 			$(this).attr('mousePressed','true');
 			return true;
@@ -91,7 +97,6 @@ function resetGame() {
 			}
 			return true;
 		});
-//*/
 	}
 }
 
@@ -99,40 +104,51 @@ function cardName($card) {
 	return $card.attr('number') + ' of ' + $card.attr('suit');
 }
 
+//determine a card's current pile
 function getPile($card) {
 	return $card.parents('.pile').attr('id');
 }
 
+//send the top card from the deck to the hand
 function dealCard(delay=0) {
 	var $topCard = $('#stack > .inner > .card[dealt="false"]').last();
 	$topCard.attr('dealt','true');
 	moveCard($topCard, 'hand', delay);
 }
 
-//move the specified .card div from one pile to another, after a delay of delay milliseconds
+/* move the specified card to a new pile or a new slot within its current pile
+ *  $card: the .card div to move
+ *  pile: the id string of the destination pile
+ *  delay: milliseconds before the animation begins (useful for staggering the initial deal)
+ *  $before: optionally, the card in the destination pile to insert this one in front of - by default, will be added to the end
+ *  from: the position to begin animating from - if this card was dragged into place, use the position of its Draggable's helper
+ */
 function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 
 	/* here is the protocol: 
-	 *   1) identify all cards that will need to move ($card and all those to the right of it in its current pile)
+	 *   1) identify all cards that will need to move
 	 *   2) switch these all to absolute position so we can animate their top and left properties
 	 *   3) place all their target cards at their destination as a placeholder/indicator of where to move to
 	 *   4) perform the animations
 	 */
 	 
 	/* STEP 1 */
-	//if the current pile is a line of cards (hand/set), all cards to the right of this one must shift left by one slot
 	var $curPile = $('#' + getPile($card) + ' > .inner'), $movingCards = $card;
 	var $newPile = $('#' + pile + ' > .inner');
 	$card.attr('moving','true');
+	//if either the source or destination pile is a line of cards rather than a stack, some cards may need to shift left/right
 	if($curPile.css('position') !== 'absolute' || $newPile.css('position') !== 'absolute') {
+		//if moving from one pile to another...
 		if(!$curPile.is($newPile)) {
+			//the cards to my right in the source pile will shift left by one slot
 			$movingCards = $movingCards.add($card.nextAll('.card[moving="false"]').filter(function() {
 				return typeof $(this).data('targetCard') != 'undefined'; }));
+			//and the cards to my right in the destination pile will shift right by one slot
 			if($before !== undefined && $newPile.css('position') !== 'absolute')
 				$movingCards = $movingCards.add($before.add($before.nextAll('.card[moving="false"]').filter(function() {
 					return typeof $(this).data('targetCard') != 'undefined'; })));
-		}else {
-			var start, end;
+		}else { //if moving within a pile, the cards between my current and destination slots will shift
+			var start, end; //first identify those slots
 			if($before !== undefined) {
 				if($before.index() < $card.index()) {
 					start = $before.index();
@@ -145,6 +161,7 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 				start = $card.index();
 				end = $curPile.children().length;
 			}
+			//then find all non-moving, non-target cards within that range of slots (non-target means I have a target)
 			$range = $curPile.children('.card[moving="false"]');
 			$range = $range.filter(function() { return typeof $(this).data('targetCard') != 'undefined'; }).slice(start,end);
 			$movingCards = $movingCards.add($range);
@@ -164,6 +181,8 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 		if($this.is($card)) $this.css('z-index','1');
 		$this.css({'top': pos.top+'px', 'left': pos.left+'px'}); //make sure it stays in place when switching to absolute
 	});
+	
+	/* STEP 3 */
 	//get all the target cards in place so we know their positions
 	$movingCards.each(function(i) {
 		var $this = $(this), $target = $this.data('targetCard').detach().css({'position':'','top':'0','left':'0'});
@@ -173,6 +192,8 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 			else $target.insertBefore($before);
 		}
 	});
+	
+	/* STEP 4 */
 	//do the animation!
 	$movingCards.each(function(i) {
 		var $this = $(this), $target = $this.data('targetCard');
@@ -202,59 +223,9 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 			}
 		);
 	});
-
-	/**** now take care of the card we want to move *****/
-	//put this card's invisible 'target card' into the destination slot so we know what coordinates to animate to
-/*	var $div = $('#'+pile+' > .inner'), $targetCard = $card.data('targetCard');
-	$targetCard.detach().css({'top':'0','left':'0'}).appendTo($div);
-	var curOffset = $card.offset(), newOffset = $targetCard.offset(), curPos = $card.position();
-	console.log('moving ' + cardName($card) + ' by ' + (newOffset.top-curOffset.top) + ',' + (newOffset.left-curOffset.left));
-	console.log('visible? ' + $card.css('visibility') + ', at ' + curOffset.top + ',' + curOffset.left + ', color ' + $card.css('background-color'));
-	$card.css('position','absolute'); //change position to absolute so we can animate its top and left properties
-	$card.css({'top': curPos.top+'px', 'left': curPos.left+'px'}); //make sure it stays in place when we make this change
-	$card.stop().delay(delay).animate(
-		{
-			'top':'+='+(newOffset.top-curOffset.top)+'px',
-			'left':'+='+(newOffset.left-curOffset.left)+'px'
-		}, 
-		{
-			duration: 1000,
-			complete: function() {
-				//once this card gets to its destination, replace the clone with it
-				console.log(cardName($card) + ' done');
-				$(this).attr('pile',pile);
-				$(this).css({'position':''});
-				$targetCard.replaceWith($(this).detach());
-				$(this).css({'top':'0','left':'0'});
-			}
-		}
-	);
-
-//*/
-
-	//determine which cards in its current pile are to its right
-	//-these will have to be shifted left once it is moved
-/*	var curPile = $card.attr('pile'), curLeft = $card.position().left;
-	var $toRight;
-	if(curPile !== 'stack') $toRight = $('.card[pile="'+curPile+'"]').filter(function() {
-		return $(this).position().left > curLeft;
-	});
-	//determine where the card should go
-	var pos = $('div #'+pile).position();
-	if(index < 0) index = $('.card[pile="'+pile+'"]').length;
-	var width = parseInt($card.css('width').replace('px','').replace('em',''));
-	var margin = parseInt($card.css('margin-left').replace('px','').replace('em',''));
-	var newTop = pos['top'], newLeft = pos['left'] + index * (width + margin);
-	//animate the motion
-	console.log(cardName($card) + ' to ' + newTop + ',' + newLeft);
-	console.log(width + ',' + margin);
-	$card.attr('pile',pile);
-	$card.delay(delay).animate({top:''+newTop+'px', left:''+newLeft+'px'}, 1000);
-	//adjust for the newly created gap in the card's old pile
-	if(curPile !== 'stack') $toRight.animate({left:'-='+(width+margin)+'px'}, 500);
-//*/
 }
 
+//find the next/previous card in my line - be sure to exclude moving cards and target cards
 function nextCard($card) {
 	var $next = $card.nextAll('.card[moving="false"]').filter(function() {
 		return typeof $(this).data('targetCard') !== 'undefined'});
@@ -270,16 +241,20 @@ function printPos($card) {
 	console.log($card.attr('number') + ' of ' + $card.attr('suit') + ' at ' + $card.css('top') + ',' + $card.css('left') + ' under ' + $card.parent().attr('id'));
 }
 
+//all the setup is done from here
 $(document).ready(function() {
-
-	$('#card_panel')[0].oncontextmenu = function(){return false;};
 
 	resetGame();
 	
+	//need this to allow right-clicks on cards
+	$('#card_panel')[0].oncontextmenu = function(){return false;};
+
+	//make sure no card thinks the mouse is pressed on it when it isn't
 	$(document).mouseup(function(event) {
 		$('.card[mousePressed="true"]').attr('mousePressed','false');
 	});
 
+	//start button toggles to the Reset button once the game is started
 	$('#start_button').html('Deal Cards');
 	$('#start_button').click(function() {
 		if(!dealt) {
@@ -293,6 +268,7 @@ $(document).ready(function() {
 		}
 	});
 	
+	//for real-time troubleshooting by logging the result of any line of JavaScript code
 	$('#debug_text').keypress(function(e) {
 		switch(e.which) {
 			case 10:
@@ -304,6 +280,7 @@ $(document).ready(function() {
 		}
 	});
 	
+	//you can also hard-code a line to print out if you think eval() won't treat it properly
 	$('#debug_button').click(function() {
 		console.log(jQuery.data($('#stack > inner')[0],'masonry'));
 	});
@@ -313,6 +290,7 @@ $(document).ready(function() {
 
 //fix for jQuery bug when setting 'scope' option for a droppable
 //taken directly from http://stackoverflow.com/questions/3097332/jquery-drag-droppable-scope-issue
+//submitted bug ticket http://bugs.jqueryui.com/ticket/9287
 jQuery.fn.extend({
 
     setDroppableScope: function(scope) {
