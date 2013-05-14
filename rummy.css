@@ -21,12 +21,21 @@ body {
 	position: relative;
 }
 #stack {
-	width: 200px;
+	width: 150px;
 	height: 200px;
 	float: left;
 }
 #stack > .inner {
 	border: 2px dashed black;
+	position: absolute;
+}
+#discard {
+	width: 150px;
+	height: 200px;
+	float: left;
+}
+#discard > .inner {
+	border: 2px dashed #884400;
 	position: absolute;
 }
 #set {
@@ -87,7 +96,7 @@ body {
 	text-align: center;
 	vertical-align: middle;
 }
-.card[pile="hand"],.card[pile="set"]:hover {
+#set .card, #hand .card:hover {
 	cursor: pointer;
 }
 
