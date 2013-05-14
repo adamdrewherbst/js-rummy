@@ -1,18 +1,13 @@
 body {
 	background-color: purple;
+	margin: 0;
+	padding: 0;
 }
 #game_panel {
 	width: 100%;
-	height: 600px;
-	background-color: gray;
+	height: auto;
+	background-color: green;
 	position: absolute;
-}
-#animation_panel {
-	width: 100%;
-	height: 420px;
-	position: absolute;
-	z-index: 1;
-	pointer-events: none;
 }
 #card_panel {
 	width: 100%;
@@ -24,18 +19,18 @@ body {
 	width: 150px;
 	height: 200px;
 	float: left;
+	border: 2px dashed black;
 }
 #stack > .inner {
-	border: 2px dashed black;
 	position: absolute;
 }
 #discard {
 	width: 150px;
 	height: 200px;
 	float: left;
+	border: 2px dashed #884400;
 }
 #discard > .inner {
-	border: 2px dashed #884400;
 	position: absolute;
 }
 #set {
@@ -43,7 +38,6 @@ body {
 	overflow: hidden;
 }
 #set > .inner {
-	border: 2px dotted red;
 	float: left;
 }
 #hand {
@@ -53,7 +47,6 @@ body {
 	position: relative;
 }
 #hand > .inner {
-	border: 2px solid blue;
 	float: left;
 }
 
@@ -80,12 +73,6 @@ body {
 	-ms-user-select: none;
 	user-select: none;
 }
-.card[suit="Clubs"],.card[suit="Spades"] {
-	color: black;
-}
-.card[suit="Diamonds"],.card[suit="Hearts"] {
-	color: red;
-}
 .card > div {
 	width: 100%;
 	height: 100%;
@@ -96,7 +83,45 @@ body {
 	text-align: center;
 	vertical-align: middle;
 }
+.card[suit="Clubs"],.card[suit="Spades"] {
+	color: black;
+}
+.card[suit="Diamonds"],.card[suit="Hearts"] {
+	color: red;
+}
+.card[dealt="false"] {
+	font-size: 0;
+	background-color: purple;
+}
 #set .card, #hand .card:hover {
 	cursor: pointer;
 }
 
+.centered_outer {
+	display: table;
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-index: 10;
+	pointer-events: none;
+	text-align: center;
+}
+.centered_inner {
+	display: table-cell;
+	vertical-align: middle;
+	width: auto;
+}
+#win_message {
+	color: red;
+	font-size: 10px;
+	visibility: hidden;
+}
+#rules_message {
+	opacity: 0.8;
+	background-color: black;
+	color: white;
+	border: 5px solid white;
+	border-radius: 50px;
+	cursor: pointer;
+	visibility: hidden;
+}

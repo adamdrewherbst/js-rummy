@@ -1,9 +1,12 @@
 //global game specs
-suits = ['Clubs', 'Spades', 'Diamonds', 'Hearts']
-numbers = ['Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Jack', 'Queen', 'King', 'Ace']
+var suits = ['Clubs']; //, 'Spades', 'Diamonds', 'Hearts']
+var numbers = ['Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Jack', 'Queen', 'King', 'Ace'];
 var numCards = suits.length * numbers.length, handSize = 7, dealt = false;
 
 function resetGame() {
+	//make sure nothing is showing on top of the card panel
+	$('#win_message').css({'visibility':'', 'font-size':''});
+	$('#rules_message').css({'visibility':'', 'pointer-events':''});
 	//generate all 52 cards as a stack on the upper left
 	dealt = false;
 	$('div.pile > .inner').empty(); //the inner div of a pile holds its cards
@@ -54,11 +57,11 @@ function resetGame() {
 				return $(this).attr('moving') === 'false';
 			},
 			activate: function(event,ui) {
-				console.log(cardName($(this)) + ' ready to receive ' + cardName(ui.draggable));
+				//console.log(cardName($(this)) + ' ready to receive ' + cardName(ui.draggable));
 			},
 			drop: function(event,ui) {
 				var $this = $(this), $other = ui.draggable, $before;
-				console.log(cardName($other) + ' dropped onto ' + cardName($this) + ' from ' + JSON.stringify(ui.helper.position()));
+				//console.log(cardName($other) + ' dropped onto ' + cardName($this) + ' from ' + JSON.stringify(ui.helper.position()));
 				if(getPile($other) !== getPile($this) || $other.index() > $this.index())
 					$before = $this;
 				else {
@@ -77,7 +80,7 @@ function resetGame() {
 		});
 		$card.mouseup(function(event) {
 			if($(this).attr('mousePressed') !== 'true') return true;
-			console.log(cardName($(this)) + ' clicked');
+			//console.log(cardName($(this)) + ' clicked');
 			$(this).attr('mousePressed','false');
 			switch(getPile($(this))) {
 				case 'stack':
@@ -85,8 +88,10 @@ function resetGame() {
 				case 'hand': //move a clicked card from the hand to the temporary zone for building runs/sets
 					if(event.which === 1 || event.button === 1) moveCard($(this), 'set');
 					else {
-						moveCard($(this), 'discard');
-						dealCard();
+						if(topCard() !== undefined) {
+							moveCard($(this), 'discard');
+							dealCard();
+						}else alert('No more cards to deal!');
 					}
 					break;
 				case 'set':
@@ -111,9 +116,18 @@ function getPile($card) {
 
 //send the top card from the deck to the hand
 function dealCard(delay=0) {
-	var $topCard = $('#stack > .inner > .card[dealt="false"]').last();
+	var $topCard = topCard();
+	if($topCard === undefined) {
+		console.log('No more cards to deal!');
+		return;
+	}
 	$topCard.attr('dealt','true');
 	moveCard($topCard, 'hand', delay);
+}
+function topCard() {
+	var $stack = $('#stack > .inner > .card[dealt="false"]');
+	if($stack.length === 0) return undefined;
+	return $stack.last();
 }
 
 /* move the specified card to a new pile or a new slot within its current pile
@@ -199,7 +213,7 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 		var $this = $(this), $target = $this.data('targetCard');
 		var pos = $(this).data('curPos');
 		var deltaTop = $target.offset().top - $this.offset().top, deltaLeft = $target.offset().left - $this.offset().left;
-		console.log('moving ' + cardName($this) + ' from ' + pos.top + ',' + pos.left + ' by ' + deltaTop + ',' + deltaLeft);
+		//console.log('moving ' + cardName($this) + ' from ' + pos.top + ',' + pos.left + ' by ' + deltaTop + ',' + deltaLeft);
 		$this.stop().delay(delay).animate(
 			{
 				top:'+='+deltaTop+'px',
@@ -219,6 +233,7 @@ function moveCard($card, pile, delay=0, $before=undefined, from={}) {
 					}else if(getPile($this) === 'discard') {
 						$this.draggable('option','disabled',true);
 					}
+					if($('.card[moving="true"]').length === 0) checkWin();
 				}
 			}
 		);
@@ -238,7 +253,72 @@ function prevCard($card) {
 }
 
 function printPos($card) {
-	console.log($card.attr('number') + ' of ' + $card.attr('suit') + ' at ' + $card.css('top') + ',' + $card.css('left') + ' under ' + $card.parent().attr('id'));
+	//console.log($card.attr('number') + ' of ' + $card.attr('suit') + ' at ' + $card.css('top') + ',' + $card.css('left') + ' under ' + $card.parent().attr('id'));
+}
+
+function checkWin() {
+	console.log('checking win');
+	var win = true; //innocent until proven guilty
+	$('#hand>.inner, #set>.inner').each(function(i) {
+		var $card = $(this).children(':first');
+		if($card.length < 1) return;
+		var $next, setType = '', setSize = 1, curMatch;
+		while(($next = nextCard($card)) !== undefined) {
+			console.log('checking ' + cardName($next));
+			//determine how this card relates to the previous one
+			if((numbers.indexOf($next.attr('number')) === numbers.indexOf($card.attr('number'))+1
+				|| ($card.attr('number') === 'Ace' && $next.attr('number') === 'Two'))
+				&& $next.attr('suit') === $card.attr('suit'))
+				curMatch = 'run';
+			else if($next.attr('number') === $card.attr('number'))
+				curMatch = 'group';
+			else curMatch = '';
+			console.log('curMatch: ' + curMatch + ', setType: ' + setType + ', setSize: ' + setSize);
+			//determine what that means in the scheme of things
+			if(setType === '') { //no current running set
+				if(curMatch === '') return win=false;
+				else {
+					setType = curMatch;
+					setSize = 2;
+				}
+			}
+			else if(curMatch === setType) setSize++; //extending the current set
+			else if(setSize < 3) return win=false; //last set was < 3 cards and we didn't extend it
+			else if(curMatch.length > 0 && setSize > 3) { //last set was > 3 cards, so we can spare the last card from it to start a new set
+				setType = curMatch;
+				setSize = 2;
+			}else { //last set was 3 cards, so we have to start a new one
+				setType = '';
+				setSize = 1;
+			}
+			$card = $next;
+		}
+		if(setSize < 3) return win=false; //make sure we ended with a valid set
+	});
+	console.log('result: ' + win);
+	if(win) {
+		console.log('YOU WIN');
+		victoryAnimation();
+	}
+//should we try to determine when the user has definitively lost? probably not.
+/*	else if($('#stack > .inner').children().length === 0) {
+		console.log('YOU LOSE');
+		failureAnimation();
+	}
+//*/
+	return win;
+}
+
+function victoryAnimation() {
+	var $winMessage = $('#win_message');
+	$winMessage.html('CONGRATULATIONS!');
+	$winMessage.css({'visibility':'visible', 'font-size':''});
+	$winMessage.animate({'font-size':'100px'}, 2000);
+}
+function failureAnimation() {
+	var $winMessage = $('#win_message');
+	$winMessage.html('SORRY, YOU LOSE.');
+	$winMessage.css({'visibility':'visible', 'font-size':'100px'});
 }
 
 //all the setup is done from here
@@ -267,6 +347,15 @@ $(document).ready(function() {
 			this.textContent = 'Deal Cards';
 		}
 	});
+	
+	var toggle_rules = function() {
+		var $msg = $('#rules_message');
+		if($msg.css('visibility') !== 'visible')
+			$msg.css({'visibility':'visible', 'pointer-events':'auto'});
+		else $msg.css({'visibility':'', 'pointer-events':''});
+	}
+	$('#rules_button').click(toggle_rules);
+	$('#rules_message').click(toggle_rules);
 	
 	//for real-time troubleshooting by logging the result of any line of JavaScript code
 	$('#debug_text').keypress(function(e) {
