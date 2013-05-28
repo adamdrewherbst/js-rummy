@@ -1,12 +1,13 @@
 //global game specs
-var suits = ['Clubs']; //, 'Spades', 'Diamonds', 'Hearts']
+var suits = ['Clubs', 'Spades', 'Diamonds', 'Hearts']
 var numbers = ['Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Jack', 'Queen', 'King', 'Ace'];
 var numCards = suits.length * numbers.length, handSize = 7, dealt = false;
 
 function resetGame() {
-	//make sure nothing is showing on top of the card panel
+	//set all buttons/messages back to initial state
 	$('#win_message').css({'visibility':'', 'font-size':''});
 	$('#rules_message').css({'visibility':'', 'pointer-events':''});
+	$('#start_button')[0].textContent = 'Deal Cards';
 	//generate all 52 cards as a stack on the upper left
 	dealt = false;
 	$('div.pile > .inner').empty(); //the inner div of a pile holds its cards
@@ -84,6 +85,7 @@ function resetGame() {
 			$(this).attr('mousePressed','false');
 			switch(getPile($(this))) {
 				case 'stack':
+					if(!dealt) deal();
 					break;
 				case 'hand': //move a clicked card from the hand to the temporary zone for building runs/sets
 					if(event.which === 1 || event.button === 1) moveCard($(this), 'set');
@@ -102,7 +104,49 @@ function resetGame() {
 			}
 			return true;
 		});
+//*/
 	}
+
+//TRIED USING SORTABLE - COULDN'T GET IT TO LOOK SMOOTH	
+/*	$('#hand > .inner').sortable({
+		revert: true,
+		cancel: '[moving="true"]',
+		connectWith: '#set',
+		dropOnEmpty: true,
+		cursor: 'move',
+		helper: 'clone',
+		distance: 15,
+		tolerance: 'intersect',
+		zIndex: 5,
+		start: function(e, ui) {
+			var $ph = $(ui.placeholder);
+			$ph.data('lastPos',$(this).index());
+		},
+		change: function(e, ui) {
+			var $ph = $(ui.placeholder);
+			if($ph.data('lastPos') < $ph.index()) {
+				var $next = $ph.next();
+				if($next.length > 0) $next.css('margin-right','125px').animate({'margin-right':'0px'},500);
+			}else {
+				var $prev = $ph.prev();
+				if($prev.length > 0) $prev.css('margin-left','125px').animate({'margin-left':'25px'},500);
+			}
+			$(ui.placeholder).css('width','0px').animate({'width':'100px'},500);
+			$ph.data('lastPos', $ph.index());
+		},
+	});
+	$('#set > .inner').sortable({
+		revert: 500,
+		cancel: '[moving="true"]',
+		connectWith: '#set',
+		dropOnEmpty: true,
+		cursor: 'move',
+		helper: 'clone',
+		distance: 15,
+		tolerance: 'intersect',
+		zIndex: 5
+	});
+//*/
 }
 
 function cardName($card) {
@@ -114,6 +158,12 @@ function getPile($card) {
 	return $card.parents('.pile').attr('id');
 }
 
+function deal() {
+	//deal the top 7 cards from the stack
+	for(var i = 0; i < handSize; i++) dealCard(i*150);
+	dealt = true;
+	$('#start_button')[0].textContent = 'Reset Game';
+}
 //send the top card from the deck to the hand
 function dealCard(delay=0) {
 	var $topCard = topCard();
@@ -337,15 +387,8 @@ $(document).ready(function() {
 	//start button toggles to the Reset button once the game is started
 	$('#start_button').html('Deal Cards');
 	$('#start_button').click(function() {
-		if(!dealt) {
-			//deal the top 7 cards from the stack
-			for(var i = 0; i < handSize; i++) dealCard(i*150);
-			this.textContent = 'Reset Game';
-			dealt = true;
-		}else {
-			resetGame();
-			this.textContent = 'Deal Cards';
-		}
+		if(!dealt) deal();
+		else resetGame();
 	});
 	
 	var toggle_rules = function() {
